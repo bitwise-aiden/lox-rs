@@ -6,7 +6,7 @@ use std::{
     process::exit,
 };
 
-use vm::{InterpretResult, VM};
+use crate::vm::{InterpretResult, VM};
 
 pub struct Velox {
     vm: VM,

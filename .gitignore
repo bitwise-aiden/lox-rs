@@ -10,3 +10,8 @@ Cargo.lock
 **/*.rs.bk
 
 main
+
+
+# Added by cargo
+
+/target

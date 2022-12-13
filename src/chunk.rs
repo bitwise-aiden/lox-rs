@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use value::Value;
+use crate::value::Value;
 
 pub enum Op {
     Constant,

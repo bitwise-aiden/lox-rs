@@ -1,18 +1,20 @@
-#[derive(Clone, PartialEq)]
+use crate::object::{ObjAllocator, ObjRef};
+
+#[derive(Clone, Copy, PartialEq)]
 pub enum Value {
     Nil,
     Bool(bool),
     Number(f64),
-    String(String),
+    String(ObjRef<String>),
 }
 
 impl Value {
-    pub fn print(&self) -> () {
+    pub fn print(&self, allocator: &ObjAllocator) -> () {
         match self {
             Value::Nil => print!("nil"),
             Value::Bool(value) => print!("{value}"),
             Value::Number(value) => print!("{value}"),
-            Value::String(value) => print!("{value}"),
+            Value::String(reference) => print!("{}", allocator.deref(*reference)),
         }
     }
 

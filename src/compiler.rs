@@ -1,10 +1,12 @@
-use std::convert::TryFrom;
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 
-use chunk::{Chunk, Op};
-use debug::{DEBUG_PRINT_CODE};
-use scanner::{Scanner, Token, TokenType};
-use value::Value;
+use crate::{
+    chunk::{Chunk, Op},
+    debug,
+    object::{ObjAllocator, ObjRef},
+    scanner::{Scanner, Token, TokenType},
+    value::Value,
+};
 
 type ParseRuleFn = Option<fn(&mut Compiler, can_assign: bool) -> ()>;
 
@@ -307,14 +309,16 @@ fn make_rules() -> Vec<ParseRule> {
 
 pub struct Compiler<'a> {
     parser: Parser<'a>,
+    allocator: &'a mut ObjAllocator,
     current_chunk: &'a mut Chunk,
     rules: Vec<ParseRule>,
 }
 
 impl<'a> Compiler<'a> {
-    pub fn new(source: &'a str, chunk: &'a mut Chunk) -> Compiler<'a> {
+    pub fn new(source: &'a str, allocator: &'a mut ObjAllocator, chunk: &'a mut Chunk) -> Compiler<'a> {
         return Compiler {
             parser: Parser::new(Scanner::new(source)),
+            allocator,
             current_chunk: chunk,
             rules: make_rules(),
         };
@@ -406,8 +410,8 @@ impl<'a> Compiler<'a> {
     fn end_compiler(&mut self) -> () {
         self.emit_return();
 
-        if DEBUG_PRINT_CODE && !self.parser.had_error {
-            self.current_chunk.dissassemble_chunk("code");
+        if debug::DEBUG_PRINT_CODE && !self.parser.had_error {
+            self.current_chunk.dissassemble_chunk("code", self.allocator);
         }
     }
 
@@ -434,7 +438,9 @@ impl<'a> Compiler<'a> {
     }
 
     fn identifier_constant(&mut self, name: &Token) -> u8 {
-        return self.make_constant(Value::String(name.lexeme.to_string()));
+        let reference: ObjRef<String> = self.allocator.intern(name.lexeme.to_owned());
+
+        return self.make_constant(Value::String(reference));
     }
 
     fn literal(&mut self, _can_assign: bool) -> () {
@@ -541,8 +547,11 @@ impl<'a> Compiler<'a> {
 
     fn string(&mut self, _can_assign: bool) -> () {
         let lexeme: &str = self.parser.previous.unwrap().lexeme;
-        let value: String = (&lexeme[1..(lexeme.len() - 1)]).to_string();
-        self.emit_constant(Value::String(value));
+        let value: &str = &lexeme[1..(lexeme.len() - 1)];
+
+        let reference: ObjRef<String> = self.allocator.intern(value.to_owned());
+
+        self.emit_constant(Value::String(reference));
     }
 
     fn synchronize(&mut self) -> () {
